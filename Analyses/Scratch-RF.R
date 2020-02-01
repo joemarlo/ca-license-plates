@@ -2,7 +2,7 @@ library(tidyverse)
 library(ranger)
 library(xgboost)
 library(vtreat)
-
+source("Analyses/Helper_functions.R")
 
 # # rejected plates ---------------------------------------------------------
 # 
@@ -159,54 +159,11 @@ library(vtreat)
 app.plates <- read_csv("Inputs/applications.csv")
 table(app.plates$status)
 
-parse_plate <- function(plate) {
-  # function takes a single plate and returns all 
-  #  "forward" combinations of the letters
-  # e.g. plate "1234" would return "12, 123, 1234, 23, 234, 34"
-  
-  if (nchar(plate) > 10) stop("Plate must be 10 or less characters)")
-  tokens <- c()
-  # if plate is just one character
-  if (nchar(plate) == 1) {
-    tokens <- plate
-  } else {
-    plate <- strsplit(plate, split = NULL)[[1]]
-    len <- length(plate)
-    
-    # index for storing results
-    i <- 1
-    # loop through the plate and take every "forward"
-    #  combination of letters
-    for (bgn in 1:(len - 1)) {
-      for (end in (bgn + 1):len) {
-        tokens[[i]] <- paste0(plate[bgn:end], collapse = "")
-        i <- i + 1
-      }
-    }
-  }
-  
-  #value controls the maximum characters
-  #  is calculated parse_plate('vect with 10 char') %>% length()
-  length(tokens) <- 45
-  return(tokens)
-}
-
 parsed.plates <- lapply(app.plates$plate, function(plate) {
   parse_plate(plate = plate) %>%
     matrix(ncol = 45) %>%
     as_tibble
 }) %>% bind_rows()
-
-generate_plate <- function() {
-  # function generates a single random string
-  #  of 7 letters and numbers 
-  
-  bool <- sample(c(TRUE, FALSE), size = 7, replace = TRUE)
-  plate <- NA
-  plate[bool] <- LETTERS[sample(1:26, size = 7, replace = TRUE)][bool]
-  plate[!bool] <- sample(0:9, size = 7, replace = TRUE)[!bool]
-  return(paste0(plate, collapse = ""))
-}
 
 # generate n random plates
 rand.plates <- replicate(n = sum(app.plates$status == "N", na.rm = TRUE),
@@ -222,11 +179,6 @@ rand.plates$status <- "Y"
 plates <- cbind(app.plates$status, parsed.plates)
 names(plates) <- c("status", paste0("V", 1:45))
 plates <- bind_rows(plates, rand.plates)
-
-fix_NA <- function(x) {
-  x[is.na(x)] <- "-"
-  x
-}
 
 plates <- plates %>% filter(status %in% c("Y", "N"))
 plates <- map_df(plates, fix_NA)
