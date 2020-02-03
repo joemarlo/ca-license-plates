@@ -152,12 +152,13 @@ plate.ngrams %>%
   ungroup() %>% 
   mutate(cluster = factor(paste0("Cluster: ", cluster),
                           levels = paste0("Cluster: ", 1:11))) %>% 
-  ggplot(aes(x = status, y = n)) +
+  ggplot(aes(x = status, y = n, fill = cluster)) +
   geom_col() +
   facet_wrap(~cluster) +
   labs(title = "Reject (N) vs. accept (Y) rates per cluster",
        x = "",
-       y = "")
+       y = "") +
+  theme(legend.position = 'none')
   
 # ggsave(filename = "Plots/rates_by_cluster.svg",
 #        plot = last_plot(),
