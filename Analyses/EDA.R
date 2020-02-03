@@ -62,8 +62,10 @@ cosine_matrix <- function(tokenized_data, lower = 0, upper = 1, filt = 0) {
 cos.mat <- cosine_matrix(plate.ngrams, lower = .0045, upper = .80, filt = .80)
 
 # plot the matrix
-cos.mat %>%
-  graph_from_adjacency_matrix(mode = "undirected", weighted = TRUE) %>%
+ngram.graph <- graph_from_adjacency_matrix(cos.mat,
+                                           mode = "undirected",
+                                           weighted = TRUE)
+ngram.graph %>%   
   ggraph(layout = "nicely") +
   geom_edge_link(aes(alpha = weight), show.legend = FALSE) +
   geom_node_label(aes(label = name))
@@ -91,6 +93,75 @@ plate.ngrams %>%
   geom_edge_link(aes(alpha = weight), show.legend = FALSE) +
   geom_node_label(aes(label = name))
   
+
+# clustering
+
+walktrap_topics <- function(g, ...) {
+  # https://www.markhw.com/blog/word-similarity-graphs
   
+  wt <- igraph::cluster_walktrap(g, ...)
   
+  membership <- igraph::cluster_walktrap(g, ...) %>% 
+    igraph::membership() %>% 
+    as.matrix() %>% 
+    as.data.frame() %>% 
+    rownames_to_column("word") %>% 
+    arrange(V1) %>% 
+    rename(group = V1)
+  
+  dendrogram <- stats::as.dendrogram(wt)
+  
+  return(list(membership = membership, dendrogram = dendrogram))
+}
+
+topics <- walktrap_topics(ngram.graph)
+
+# png("Plots/dendrogram.png", width = 1500, height = 1200)
+par(cex = 1.6)
+plot(topics$dendrogram)
+# dev.off()
+
+# grab the identifiers for the clusters
+V(ngram.graph)$cluster <- arrange(topics$membership, word)$group
+
+# plot the matrix but color by cluster
+ngram.graph %>%   
+  ggraph(layout = "nicely") +
+  geom_edge_link(aes(alpha = weight), show.legend = FALSE) +
+  geom_node_label(aes(label = name,
+                      color = factor(cluster)),
+                  show.legend = FALSE)
+
+# ggsave(filename = "Plots/clustered_cloud.svg",
+#        plot = last_plot(),
+#        device = "svg",
+#        width = 8,
+#        height = 7)
+
+# frequency of denials vs. approved by cluster
+plate.ngrams %>% 
+  filter(word %in% colnames(cos.mat)) %>% 
+  inner_join(app.plates, by = "id") %>% 
+  select(id, word, status) %>% 
+  inner_join(topics$membership, by = "word") %>% 
+  rename(cluster = group) %>% 
+  # group_by(cluster) %>% 
+  count(cluster, status) %>% 
+  group_by(cluster) %>% 
+  mutate(n = n/sum(n)) %>% 
+  ungroup() %>% 
+  mutate(cluster = factor(paste0("Cluster: ", cluster),
+                          levels = paste0("Cluster: ", 1:11))) %>% 
+  ggplot(aes(x = status, y = n)) +
+  geom_col() +
+  facet_wrap(~cluster) +
+  labs(title = "Reject (N) vs. accept (Y) rates per cluster",
+       x = "",
+       y = "")
+  
+# ggsave(filename = "Plots/rates_by_cluster.svg",
+#        plot = last_plot(),
+#        device = "svg",
+#        width = 8,
+#        height = 7)
   
