@@ -116,10 +116,15 @@ walktrap_topics <- function(g, ...) {
 
 topics <- walktrap_topics(ngram.graph)
 
-# png("Plots/dendrogram.png", width = 1500, height = 1200)
-par(cex = 1.6)
-plot(topics$dendrogram)
-# dev.off()
+ggdendro::ggdendrogram(topics$dendrogram,
+                       rotate = TRUE) +
+  theme(panel.grid.major.y = element_line(color = NA))
+
+# ggsave(filename = "Plots/dendrogram.svg",
+#        plot = last_plot(),
+#        device = "svg",
+#        width = 8,
+#        height = 11)
 
 # grab the identifiers for the clusters
 V(ngram.graph)$cluster <- arrange(topics$membership, word)$group
