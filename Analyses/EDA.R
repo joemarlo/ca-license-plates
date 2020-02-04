@@ -155,14 +155,15 @@ plate.ngrams %>%
   group_by(cluster) %>% 
   mutate(n = n/sum(n)) %>% 
   ungroup() %>% 
-  mutate(cluster = factor(paste0("Cluster: ", cluster),
-                          levels = paste0("Cluster: ", 1:11))) %>% 
+  mutate(cluster = factor(paste0("Community ", cluster),
+                          levels = paste0("Community ",
+                                          1:max(topics$membership["group"])))) %>% 
   ggplot(aes(x = status, y = n, fill = cluster)) +
   geom_col() +
   geom_hline(yintercept = mean(app.plates$status == "N"),
              color = "grey80") +
   facet_wrap(~cluster) +
-  labs(title = "Reject (N) vs. accept (Y) rates per cluster",
+  labs(title = "Reject (N) vs. accept (Y) rates per community",
        subtitle = "Horizontal line is global rejection rate",
        x = "",
        y = "") +
