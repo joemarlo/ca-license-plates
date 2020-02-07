@@ -53,7 +53,7 @@ parse_plate <- function(plate) {
 
 # custom theme for ggplot
 theme_custom <- function() {
-  theme_gray() +
+  ggplot2::theme_gray() +
     theme(
       panel.grid.minor.y = element_line(color = NA),
       panel.grid.major.y = element_line(color = "gray95"),

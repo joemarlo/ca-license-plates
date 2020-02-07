@@ -1,5 +1,7 @@
 # Classifying California custom license plate requests
 
+**Warning: this dataset contains vulgar and offensive language (quite a lot of it).**
+
 ## Initial EDA of license plate ngrams
 
 <p align="center">

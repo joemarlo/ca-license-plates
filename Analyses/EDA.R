@@ -2,6 +2,7 @@ library(tidyverse)
 library(tidytext)
 library(igraph)
 library(ggraph)
+library(stringdist)
 source("Analyses/Helper_functions.R")
 set.seed(44)
 
@@ -174,4 +175,43 @@ plate.ngrams %>%
 #        device = "svg",
 #        width = 8,
 #        height = 7)
+
+
+
+# compare to bad words list -----------------------------------------------
+
+bad.words <- read_delim("Data/bad_words.txt",
+                        delim = "\n",
+                        col_names = FALSE) %>% 
+  pull()
+
+test.if.bad.word <- function(word, threshold = 0.9){
+  # function returns a boolean if the input word is 
+  #  a "bad word" based on the bad.words list
   
+  stringsim(word, bad.words, method = "soundex") %>%
+    max() >= threshold
+}
+
+test.if.bad.word('ass')
+
+# test all the words
+plate.ngrams <- plate.ngrams %>% 
+  rowwise() %>% 
+  mutate(word.collapse = str_replace_all(word, " ", ""),
+         bad.word = test.if.bad.word(word.collapse)) %>% 
+  ungroup()
+
+table(plate.ngrams$bad.word)
+
+# cross tab of bad word in plate and rejection
+ngrams %>% 
+  group_by(id) %>% 
+  summarize(bad.word = max(bad.word)) %>% 
+  left_join(app.plates[, c('id', 'status')]) %>% 
+  mutate(bad.word = bad.word == 1,
+         status = status == "N") %>% 
+  xtabs(~bad.word + status, data = .)
+
+
+
