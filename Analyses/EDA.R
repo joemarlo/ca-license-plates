@@ -6,7 +6,8 @@ library(stringdist)
 source("Analyses/Helper_functions.R")
 set.seed(44)
 
-# cosine similarity -------------------------------------------------------
+
+# create ngrams -----------------------------------------------------------
 
 # read in the data then filter to plates that were either accepted
 #  or rejected and add spaces between plate characters so we can split it 
@@ -24,6 +25,8 @@ plate.ngrams <- app.plates %>%
   select(id, word) %>% 
   filter(nchar(word) > 4)
 
+
+# cosine similarity -------------------------------------------------------
 
 cosine_matrix <- function(tokenized_data, lower = 0, upper = 1, filt = 0) {
   # function builds a cosine matrix from the tokenized data
@@ -185,7 +188,7 @@ bad.words <- read_delim("Data/bad_words.txt",
                         col_names = FALSE) %>% 
   pull()
 
-test.if.bad.word <- function(word, threshold = 0.9){
+test.if.bad.word <- function(word, threshold = 0.95){
   # function returns a boolean if the input word is 
   #  a "bad word" based on the bad.words list
   
@@ -193,7 +196,11 @@ test.if.bad.word <- function(word, threshold = 0.9){
     max() >= threshold
 }
 
-test.if.bad.word('ass')
+test.if.bad.word('azz')
+
+(stringsim("2ch", bad.words, method = "soundex")  > 0) %>% 
+  which(.) %>% 
+  bad.words[.]
 
 # test all the words
 plate.ngrams <- plate.ngrams %>% 
@@ -205,7 +212,7 @@ plate.ngrams <- plate.ngrams %>%
 table(plate.ngrams$bad.word)
 
 # cross tab of bad word in plate and rejection
-ngrams %>% 
+plate.ngrams %>% 
   group_by(id) %>% 
   summarize(bad.word = max(bad.word)) %>% 
   left_join(app.plates[, c('id', 'status')]) %>% 
