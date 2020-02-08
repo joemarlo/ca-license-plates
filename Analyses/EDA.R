@@ -205,20 +205,28 @@ plate.ngrams.2 <- plate.ngrams.2 %>%
 
 plate.ngrams.2 %>%
   left_join(app.plates[, c("id", "status")]) %>% 
-  mutate(status = recode(status, Y = "Approved", N = "Rejected")) %>% 
-  group_by(id, status) %>% 
-  summarize(soundex.max = max(soundex),
-            soundex.mean = mean(soundex),
-            osa.max = max(osa),
-            osa.mean = mean(osa)) %>% 
-  pivot_longer(cols = 3:6) %>% 
+  mutate(status = recode(status, Y = "Plate approved", N = "Plate rejected")) %>% 
+  pivot_longer(cols = c("soundex", "osa"), names_to = "algo") %>% 
+  group_by(id, status, algo) %>% 
+  summarize(Nintieth.percentile = quantile(value, .90),
+            Fiftieth.percentile = quantile(value, .50),
+            Twentieth.percentile = quantile(value, .10)) %>% 
+  pivot_longer(cols = 4:6) %>% 
+  mutate(name = factor(name,
+                       levels = c("Twentieth.percentile",
+                                  "Fiftieth.percentile",
+                                  "Nintieth.percentile"))) %>% 
   ggplot(aes(x = value)) +
-  geom_density() +
-  facet_grid(status~name) +
-  labs(title = "Probability that a plate contains a bad word based on various algorithms",
-       subtitle = "Scores are the max and mean of all ngrams per plate",
+  geom_density(aes(fill = status), alpha = 0.01) +
+  geom_density(aes(color = status)) +
+  scale_color_manual(values = c("forestgreen", "firebrick2")) +
+  scale_fill_manual(values = c("forestgreen", "firebrick2")) +
+  facet_grid(algo~name) +
+  labs(title = "String distance scores from each plate to a list of bad words",
+       subtitle = "Scores are the X percentile of all ngrams grouped by plate",
        x = NULL,
-       y = 'Density')
+       y = 'Density') +
+  theme(legend.title = element_blank())
 
 # ggsave(filename = "Plots/algo_scores.svg",
 #        plot = last_plot(),
