@@ -19,19 +19,21 @@ generate_plate <- function(plate.nchar = 7) {
   return(paste0(plate, collapse = ""))
 }
 
-parse_plate <- function(plate) {
+parse_plate <- function(plate, min.nchar = 2, max.nchar = nchar(plate)) {
   # function takes a single plate and returns all 
   #  "forward" combinations of the letters
   # e.g. plate "1234" would return "12, 123, 1234, 23, 234, 34"
+  # min.nchar is the minimum amount of characters in a given ngram
+  # max.nchar '...'
   
-  if (nchar(plate) > 10) stop("Plate must be 10 or less characters)")
+  if (min.nchar < 2) stop("min.nchar should be 2 or greater")
   tokens <- c()
   # if plate is just one character
   if (nchar(plate) == 1) {
     tokens <- plate
   } else {
-    plate <- strsplit(plate, split = NULL)[[1]]
-    len <- length(plate)
+    plate.split <- strsplit(plate, split = NULL)[[1]]
+    len <- length(plate.split)
     
     # index for storing results
     i <- 1
@@ -39,15 +41,15 @@ parse_plate <- function(plate) {
     #  combination of letters
     for (bgn in 1:(len - 1)) {
       for (end in (bgn + 1):len) {
-        tokens[[i]] <- paste0(plate[bgn:end], collapse = "")
+        tokens[[i]] <- paste0(plate.split[bgn:end], collapse = "")
         i <- i + 1
       }
     }
   }
+
+  tokens <- tokens[nchar(tokens) >= min.nchar & nchar(tokens) <= max.nchar]
   tokens <- unique(tokens)
-  #value controls the maximum characters
-  #  is calculated parse_plate('vect with 10 char') %>% length()
-  # length(tokens) <- 45
+  tokens <- tolower(tokens)
   return(tokens)
 }
 

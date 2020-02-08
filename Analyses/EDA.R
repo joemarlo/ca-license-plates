@@ -22,14 +22,14 @@ app.plates <- read_csv("Inputs/applications.csv") %>%
 # create the tokenized data
 plate.ngrams <- app.plates %>%
   unnest_tokens(input = plate.sep, output = word, token = "skip_ngrams") %>%
-  select(id, word) %>% 
+  select(id, word) %>%  
   filter(nchar(word) > 4)
 
 # create tokenzied data: custom method
 plate.ngrams.2 <- app.plates %>% 
   select(id, plate) %>% 
   rowwise() %>%
-  mutate(word = list(parse_plate(plate))) %>%
+  mutate(word = list(parse_plate(plate, max.nchar = 4))) %>%
   ungroup() %>% 
   unnest(word)
 
@@ -198,24 +198,27 @@ bad.words <- read_delim("Data/bad_words.txt",
 
 # test all the words
 plate.ngrams.2 <- plate.ngrams.2 %>% 
+  mutate(perfect.match = word %in% bad.words) %>%
   rowwise() %>% 
   mutate(soundex = stringsim(word, bad.words, method = 'soundex') %>% max(),
          osa = stringsim(word, bad.words, method = 'osa') %>% max()) %>% 
   ungroup()
 
 plate.ngrams.2 %>%
-  left_join(app.plates[, c("id", "status")]) %>% 
+  left_join(app.plates[, c("id", "status")], by = 'id') %>% 
   mutate(status = recode(status, Y = "Plate approved", N = "Plate rejected")) %>% 
-  pivot_longer(cols = c("soundex", "osa"), names_to = "algo") %>% 
+  pivot_longer(cols = c("soundex", "osa", "perfect.match"), names_to = "algo") %>% 
   group_by(id, status, algo) %>% 
-  summarize(Nintieth.percentile = quantile(value, .90),
+  summarize(Maximum = max(value),
+            Nintieth.percentile = quantile(value, .90),
             Fiftieth.percentile = quantile(value, .50),
             Twentieth.percentile = quantile(value, .10)) %>% 
-  pivot_longer(cols = 4:6) %>% 
+  pivot_longer(cols = 4:7) %>% 
   mutate(name = factor(name,
                        levels = c("Twentieth.percentile",
                                   "Fiftieth.percentile",
-                                  "Nintieth.percentile"))) %>% 
+                                  "Nintieth.percentile",
+                                  "Maximum"))) %>% 
   ggplot(aes(x = value)) +
   geom_density(aes(fill = status), alpha = 0.01) +
   geom_density(aes(color = status)) +
@@ -235,23 +238,21 @@ plate.ngrams.2 %>%
 #        height = 7)
 
 
-# test all the words
-plate.ngrams <- plate.ngrams %>% 
-  rowwise() %>% 
-  mutate(word.collapse = str_replace_all(word, " ", ""),
-         bad.word = test.if.bad.word(word.collapse)) %>% 
-  ungroup()
-
-table(plate.ngrams$bad.word)
-
-# cross tab of bad word in plate and rejection
-plate.ngrams %>% 
-  group_by(id) %>% 
-  summarize(bad.word = max(bad.word)) %>% 
-  left_join(app.plates[, c('id', 'status')]) %>% 
-  mutate(bad.word = bad.word == 1,
-         status = status == "N") %>% 
-  xtabs(~bad.word + status, data = .)
-
-
+# # test all the words
+# plate.ngrams <- plate.ngrams %>% 
+#   rowwise() %>% 
+#   mutate(word.collapse = str_replace_all(word, " ", ""),
+#          bad.word = test.if.bad.word(word.collapse)) %>% 
+#   ungroup()
+# 
+# table(plate.ngrams$bad.word)
+# 
+# # cross tab of bad word in plate and rejection
+# plate.ngrams %>% 
+#   group_by(id) %>% 
+#   summarize(bad.word = max(bad.word)) %>% 
+#   left_join(app.plates[, c('id', 'status')]) %>% 
+#   mutate(bad.word = bad.word == 1,
+#          status = status == "N") %>% 
+#   xtabs(~bad.word + status, data = .)
 
