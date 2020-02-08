@@ -2,20 +2,6 @@
 
 **Warning: this dataset contains vulgar and offensive language (quite a lot of it).**
 
-## Initial EDA of license plate ngrams
-
-<p align="center">
-<img src="Plots/clustered_cloud.svg" width=79%>
-</p>
-
-<p align="center">
-<img src="Plots/dendrogram.svg" width=79%>
-</p>
-
-<p align="center">
-<img src="Plots/rates_by_cluster.svg" width=79%>
-</p>
-
 ## The data
 
 See the [original repo](https://github.com/veltman/ca-license-plates) for the full data description details.
@@ -31,3 +17,21 @@ These do NOT represent all applications received by the DMV during that timefram
 - `reviewer_comments`: Comments from DMV reviewers.
 - `status`: `Y` means the plate was approved, `N` means it was denied.
 
+
+## Initial EDA of license plate ngrams
+
+<p align="center">
+<img src="Plots/clustered_cloud.svg" width=79%>
+</p>
+
+<p align="center">
+<img src="Plots/dendrogram.svg" width=79%>
+</p>
+
+<p align="center">
+<img src="Plots/rates_by_cluster.svg" width=79%>
+</p>
+
+<p align="center">
+<img src="Plots/algo_scores.svg" width=79%>
+</p>

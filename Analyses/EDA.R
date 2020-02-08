@@ -25,6 +25,14 @@ plate.ngrams <- app.plates %>%
   select(id, word) %>% 
   filter(nchar(word) > 4)
 
+# create tokenzied data: custom method
+plate.ngrams.2 <- app.plates %>% 
+  select(id, plate) %>% 
+  rowwise() %>%
+  mutate(word = list(parse_plate(plate))) %>%
+  ungroup() %>% 
+  unnest(word)
+
 
 # cosine similarity -------------------------------------------------------
 
@@ -188,19 +196,36 @@ bad.words <- read_delim("Data/bad_words.txt",
                         col_names = FALSE) %>% 
   pull()
 
-test.if.bad.word <- function(word, threshold = 0.95){
-  # function returns a boolean if the input word is 
-  #  a "bad word" based on the bad.words list
-  
-  stringsim(word, bad.words, method = "soundex") %>%
-    max() >= threshold
-}
+# test all the words
+plate.ngrams.2 <- plate.ngrams.2 %>% 
+  rowwise() %>% 
+  mutate(soundex = stringsim(word, bad.words, method = 'soundex') %>% max(),
+         osa = stringsim(word, bad.words, method = 'osa') %>% max()) %>% 
+  ungroup()
 
-test.if.bad.word('azz')
+plate.ngrams.2 %>%
+  left_join(app.plates[, c("id", "status")]) %>% 
+  mutate(status = recode(status, Y = "Approved", N = "Rejected")) %>% 
+  group_by(id, status) %>% 
+  summarize(soundex.max = max(soundex),
+            soundex.mean = mean(soundex),
+            osa.max = max(osa),
+            osa.mean = mean(osa)) %>% 
+  pivot_longer(cols = 3:6) %>% 
+  ggplot(aes(x = value)) +
+  geom_density() +
+  facet_grid(status~name) +
+  labs(title = "Probability that a plate contains a bad word based on various algorithms",
+       subtitle = "Scores are the max and mean of all ngrams per plate",
+       x = NULL,
+       y = 'Density')
 
-(stringsim("2ch", bad.words, method = "soundex")  > 0) %>% 
-  which(.) %>% 
-  bad.words[.]
+# ggsave(filename = "Plots/algo_scores.svg",
+#        plot = last_plot(),
+#        device = "svg",
+#        width = 8,
+#        height = 7)
+
 
 # test all the words
 plate.ngrams <- plate.ngrams %>% 

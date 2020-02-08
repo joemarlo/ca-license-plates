@@ -44,10 +44,10 @@ parse_plate <- function(plate) {
       }
     }
   }
-  
+  tokens <- unique(tokens)
   #value controls the maximum characters
   #  is calculated parse_plate('vect with 10 char') %>% length()
-  length(tokens) <- 45
+  # length(tokens) <- 45
   return(tokens)
 }
 
