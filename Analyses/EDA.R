@@ -229,7 +229,8 @@ plate.ngrams.2 %>%
        subtitle = "Scores are the X percentile of all ngrams grouped by plate",
        x = NULL,
        y = 'Density') +
-  theme(legend.title = element_blank())
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
 
 # ggsave(filename = "Plots/algo_scores.svg",
 #        plot = last_plot(),
