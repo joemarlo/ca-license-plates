@@ -16,13 +16,20 @@ app.plates <- read_csv("Inputs/applications.csv") %>%
   rename(id = rowid) %>% 
   mutate(source = 'CA')
 
-faux.plates <- replicate(25000, generate_plate()) %>% 
+# generate fake plates to balance the dataset between accepted and rejected
+# we will assume all of these will be approved although there is a small chance
+#   some would accidently include negative phrases and would be rejected in real-life
+n.faux <- sum(app.plates$status == "N") - sum(app.plates$status == "Y")
+
+faux.plates <- replicate(n.faux, generate_plate()) %>% 
   enframe() %>% 
   select(value) %>% 
   rename(plate = value) %>% 
   mutate(status = "Y",
          source = 'generated')
-  
+rm(n.faux)
+
+# bind back to app.plates to create one dataframe
 all.plates <- app.plates %>% 
   select(plate, status, source) %>% 
   bind_rows(faux.plates)
@@ -34,6 +41,9 @@ plate.ngrams <- all.plates %>%
   ungroup() %>% 
   unnest(word)
 
+##### need to split the dataset to training and testing
+
+# read in the list of bad words
 bad.words <- read_delim("Data/bad_words.txt",
                         delim = "\n",
                         col_names = FALSE) %>% 
@@ -52,24 +62,66 @@ plate.ngrams <- plate.ngrams %>%
   ungroup() %>% 
   right_join(plate.ngrams, by = 'word') %>% 
   select(source, plate, word, perfect.match, soundex, osa) %>% 
-  left_join(app.plates[, c("plate", "status")], by = 'plate')
+  left_join(all.plates[, c("plate", "status")], by = 'plate')
 
 
-score_plate <- function(perfect.match, soundex, osa){
-  plate.ngrams %>% 
-    filter(plate == plate) %>% 
-    
-}
-
-scored.plates <- plate.ngrams %>% 
+plate.ngrams %>% 
   group_by(plate, status) %>% 
-  mutate(score = if_else(max(perfect.match) == 1, "N", 
-                         if_else(max(soundex * .8 + osa * .2) > 0.95, "N", "Y"))) %>% 
+  # mutate(score = if_else(max(perfect.match) == 1, "N", "Y")) %>% 
+  mutate(score = if_else(max(perfect.match) == 1, "N",
+                         if_else(max(soundex * .3 + osa * .7) > 0.8, "N", "Y"))) %>%
   summarize(score = max(score)) %>% 
-  xtabs(~status + score, data = .)
+  xtabs(~status + score, data = .) %>% 
+  prop.table() %>% 
+  round(., 2)
 
+# create grid of various weightings of the soundex and OSA algos
+#  along with a threshold to build a aggregate score based on 
+#  this formula (soundex score * weight + osa score  * (1 - weight)) > threshold
+#  which results in a boolean telling us to accept or reject the plate
+grid.search <- expand.grid(sd = seq(0, 1, by = 0.1),
+                           threshold = seq(.1, 1, by = 0.1)) %>% 
+  mutate(os = 1 - sd) %>% 
+  select(sd, os, threshold)
   
+error.rates <- pmap(list(grid.search$sd, grid.search$os, grid.search$threshold), 
+                    function(sd, os, threshold) {
+  # mapping returns type 1 and type 2 rates for each combination of
+  #  values in the grid.search grid
+                      
+  rslts <- plate.ngrams %>%
+    group_by(plate, status) %>%
+    # mutate(score = if_else(max(perfect.match) == 1, "N", "Y")) %>%
+    mutate(score = if_else(
+      max(perfect.match) == 1, "N",
+      if_else(max(soundex * sd + osa * os) > threshold, "N", "Y")
+    )) %>%
+    summarize(score = max(score)) %>%
+    xtabs(~ status + score, data = .)
+  
+  TPR <- rslts[2,2] / (rslts[2,2] + rslts[2, 1])
+  FPR <- rslts[1,2] / (rslts[1,2] + rslts[1, 1])
+  
+  return(list(TPR, FPR))
+})
+  
+error.rates <- error.rates %>% 
+  unlist() %>% 
+  matrix(ncol = 2, byrow = TRUE) %>% 
+  as_tibble() %>% 
+  rename(TPR = V1,
+         FPR = V2) %>% 
+  bind_cols(grid.search, .) %>% 
+  mutate(Inputs = paste0(sd, '-', os, '-', threshold),
+         AUC = DescTools::AUC(x = FPR, y = TPR)) %>% 
+  select(FPR, TPR, Inputs, AUC)
 
+error.rates %>% 
+  ggplot(aes(x = FPR, y = TPR, label = Inputs)) +
+  geom_point(alpha = 0.5) +
+  # geom_text()
+  labs(title = paste0('AUC: ', round(error.rates$AUC[[1]], 2))) +
+  coord_cartesian(xlim = c(0,1), ylim = c(0,1))
 
 
 #  then summarize the string dist results by plate 

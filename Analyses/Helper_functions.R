@@ -47,7 +47,7 @@ generate_plate <- function(plate.nchar = 7) {
   
   index <- sample(c(TRUE, FALSE), size = plate.nchar, replace = TRUE)
   plate <- NA
-  plate[index] <- LETTERS[sample(1:26, size = plate.nchar, replace = TRUE)][index]
+  plate[index] <- sample(LETTERS, size = plate.nchar, replace = TRUE)[index]
   plate[!index] <- sample(0:9, size = plate.nchar, replace = TRUE)[!index]
   return(paste0(plate, collapse = ""))
 }
