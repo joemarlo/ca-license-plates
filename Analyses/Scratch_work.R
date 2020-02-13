@@ -117,11 +117,25 @@ error.rates <- error.rates %>%
   select(FPR, TPR, Inputs, AUC)
 
 error.rates %>% 
-  ggplot(aes(x = FPR, y = TPR, label = Inputs)) +
-  geom_point(alpha = 0.5) +
-  # geom_text()
-  labs(title = paste0('AUC: ', round(error.rates$AUC[[1]], 2))) +
+  mutate(Total = TPR / FPR) %>% 
+  filter(floor(FPR*10) == 2) %>% 
+  mutate(label = Inputs) %>% 
+  right_join(error.rates) %>% 
+  ggplot(aes(x = FPR, y = TPR, label = label)) +
+  geom_point() +
+  geom_smooth(color = 'grey70',
+              se = FALSE) +
+  ggrepel::geom_label_repel(alpha = 0.5) +
+  labs(title = 'ROC curve for various edit distance tuning parameters',
+       subtitle = paste0('AUC: ', round(error.rates$AUC[[1]], 2)),
+       caption = 'format: soundex - osa - threshold') +
   coord_cartesian(xlim = c(0,1), ylim = c(0,1))
+
+ggsave(filename = "Plots/ROC.svg",
+       plot = last_plot(),
+       device = "svg",
+       width = 8,
+       height = 7)
 
 
 #  then summarize the string dist results by plate 

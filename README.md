@@ -33,5 +33,5 @@ These do NOT represent all applications received by the DMV during that timefram
 </p>
 
 <p align="center">
-<img src="Plots/algo_scores.svg" width=79%>
+<img src="Plots/ROC.svg" width=79%>
 </p>
