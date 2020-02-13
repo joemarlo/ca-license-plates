@@ -126,7 +126,7 @@ error.rates %>%
   geom_smooth(color = 'grey70',
               se = FALSE) +
   ggrepel::geom_label_repel(alpha = 0.5) +
-  labs(title = 'ROC curve for various edit distance tuning parameters',
+  labs(title = 'Classifying rejections: ROC curve for edit distance tuning parameters',
        subtitle = paste0('AUC: ', round(error.rates$AUC[[1]], 2)),
        caption = 'format: soundex - osa - threshold') +
   coord_cartesian(xlim = c(0,1), ylim = c(0,1))
