@@ -118,7 +118,10 @@ error.rates <- error.rates %>%
 
 error.rates %>% 
   mutate(Total = TPR / FPR) %>% 
-  filter(floor(FPR*10) == 2) %>% 
+  filter(floor(FPR*10) == 2) %>%
+  group_by(Total) %>% 
+  slice(c(1, n())) %>% 
+  ungroup() %>% 
   mutate(label = Inputs) %>% 
   right_join(error.rates) %>% 
   ggplot(aes(x = FPR, y = TPR, label = label)) +
