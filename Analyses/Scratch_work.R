@@ -113,30 +113,39 @@ cleaned.er <- error.rates %>%
   rename(TPR = V1,
          FPR = V2) %>% 
   bind_cols(grid.search, .) %>% 
-  mutate(Inputs = paste(quantile, sd, os, threshold, sep = "-"),
-         AUC = DescTools::AUC(x = FPR, y = TPR)) %>% 
+  mutate(Inputs = paste(quantile, sd, os, threshold, sep = "-")) %>% 
   select(FPR, TPR, Inputs, AUC)
 
+# filter out observations that aren't on the frontier
+filtered.er <- map2(cleaned.er$FPR, cleaned.er$TPR, function(fpr, tpr){
+  nrow(cleaned.er[cleaned.er$FPR < fpr & cleaned.er$TPR > tpr,]) > 0
+}) %>% 
+  unlist() %>% 
+  cbind(cleaned.er, .) %>% 
+  setNames(c('FPR', 'TPR', 'Inputs', 'AUC', 'Dup')) %>% 
+  filter(!Dup) %>% 
+  mutate(AUC = DescTools::AUC(x = FPR, y = TPR),
+         Total = TPR / FPR)
+
 # ROC plot of the edit distance parameters
-cleaned.er %>% 
-  mutate(Total = TPR / FPR) %>% 
-  group_by(round(Total, 1)) %>% 
-  slice(1) %>% 
-  ungroup() %>% 
+filtered.er %>% 
+  group_by(round(Total, 1)) %>%
+  slice(1) %>%
+  ungroup() %>%
   filter(TPR > .5,
-         FPR < .2) %>%
-  mutate(label = Inputs) %>% 
-  right_join(cleaned.er) %>% 
+         FPR < .3) %>%
+  mutate(label = Inputs) %>%
+  right_join(filtered.er) %>%
   ggplot(aes(x = FPR, y = TPR, label = label)) +
   geom_point() +
   geom_line(color = "grey70") +
   ggrepel::geom_label_repel(alpha = 0.5,
-                            box.padding = .1,
+                            box.padding = .2,
                             fill = '#133022',
                             color = 'white') +
   labs(title = 'Classifying rejections: ROC curve for edit distance tuning parameters',
-       subtitle = paste0('AUC: ', round(cleaned.er$AUC[[1]], 2)),
-       caption = 'Label format: quantile-soundex-osa-threshold\nFormula: quantile(soundex.score * soundex.value - osa.score * osa.value) > threshold') +
+       subtitle = paste0('AUC: ', round(filtered.er$AUC[[1]], 2)),
+       caption = 'Label format: quantile-soundex-osa-threshold\nFormula: quantile(soundex.score * soundex.value + osa.score * osa.value) > threshold') +
   coord_cartesian(xlim = c(0,1), ylim = c(0,1))
 
 # ggsave(filename = "Plots/ROC.svg",
