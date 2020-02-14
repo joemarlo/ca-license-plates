@@ -79,13 +79,14 @@ plate.ngrams %>%
 #  along with a threshold to build a aggregate score based on 
 #  this formula (soundex score * weight + osa score  * (1 - weight)) > threshold
 #  which results in a boolean telling us to accept or reject the plate
-grid.search <- expand.grid(sd = seq(0, 1, by = 0.1),
-                           threshold = seq(.1, 1, by = 0.1)) %>% 
+grid.search <- expand.grid(sd = seq(0, 1, by = 0.2),
+                           threshold = seq(.1, 1, by = 0.2),
+                           quantile = seq(.5, 1, by = 0.1)) %>% 
   mutate(os = 1 - sd) %>% 
-  select(sd, os, threshold)
+  select(sd, os, threshold, quantile)
   
-error.rates <- pmap(list(grid.search$sd, grid.search$os, grid.search$threshold), 
-                    function(sd, os, threshold) {
+error.rates <- pmap(list(grid.search$sd, grid.search$os, grid.search$threshold, grid.search$quantile), 
+                    function(sd, os, threshold, qtle) {
   # mapping returns type 1 and type 2 rates for each combination of
   #  values in the grid.search grid
                       
@@ -94,7 +95,7 @@ error.rates <- pmap(list(grid.search$sd, grid.search$os, grid.search$threshold),
     # mutate(score = if_else(max(perfect.match) == 1, "N", "Y")) %>%
     mutate(score = if_else(
       max(perfect.match) == 1, "N",
-      if_else(max(soundex * sd + osa * os) > threshold, "N", "Y")
+      if_else(quantile(soundex * sd + osa * os, qtle) > threshold, "N", "Y")
     )) %>%
     summarize(score = max(score)) %>%
     xtabs(~ status + score, data = .)
@@ -105,51 +106,45 @@ error.rates <- pmap(list(grid.search$sd, grid.search$os, grid.search$threshold),
   return(list(TPR, FPR))
 })
   
-error.rates <- error.rates %>% 
+cleaned.er <- error.rates %>% 
   unlist() %>% 
   matrix(ncol = 2, byrow = TRUE) %>% 
   as_tibble() %>% 
   rename(TPR = V1,
          FPR = V2) %>% 
   bind_cols(grid.search, .) %>% 
-  mutate(Inputs = paste0(sd, '-', os, '-', threshold),
+  mutate(Inputs = paste(quantile, sd, os, threshold, sep = "-"),
          AUC = DescTools::AUC(x = FPR, y = TPR)) %>% 
   select(FPR, TPR, Inputs, AUC)
 
-error.rates %>% 
+# ROC plot of the edit distance parameters
+cleaned.er %>% 
   mutate(Total = TPR / FPR) %>% 
-  filter(floor(FPR*10) == 2) %>%
-  group_by(Total) %>% 
-  slice(c(1, n())) %>% 
+  group_by(round(Total, 1)) %>% 
+  slice(1) %>% 
   ungroup() %>% 
+  filter(TPR > .5,
+         FPR < .2) %>%
   mutate(label = Inputs) %>% 
-  right_join(error.rates) %>% 
+  right_join(cleaned.er) %>% 
   ggplot(aes(x = FPR, y = TPR, label = label)) +
   geom_point() +
-  geom_smooth(color = 'grey70',
-              se = FALSE) +
-  ggrepel::geom_label_repel(alpha = 0.5) +
+  geom_line(color = "grey70") +
+  ggrepel::geom_label_repel(alpha = 0.5,
+                            box.padding = .1,
+                            fill = '#133022',
+                            color = 'white') +
   labs(title = 'Classifying rejections: ROC curve for edit distance tuning parameters',
-       subtitle = paste0('AUC: ', round(error.rates$AUC[[1]], 2)),
-       caption = 'format: soundex - osa - threshold') +
+       subtitle = paste0('AUC: ', round(cleaned.er$AUC[[1]], 2)),
+       caption = 'Label format: quantile-soundex-osa-threshold\nFormula: quantile(soundex.score * soundex.value - osa.score * osa.value) > threshold') +
   coord_cartesian(xlim = c(0,1), ylim = c(0,1))
 
-ggsave(filename = "Plots/ROC.svg",
-       plot = last_plot(),
-       device = "svg",
-       width = 8,
-       height = 7)
+# ggsave(filename = "Plots/ROC.svg",
+#        plot = last_plot(),
+#        device = "svg",
+#        width = 8,
+#        height = 7)
 
 
-#  then summarize the string dist results by plate 
-summ.ngrams <- plate.ngrams %>%
-  left_join(app.plates[, c("plate", "status")], by = 'plate') %>% 
-  mutate(status = recode(status, Y = "Plate approved", N = "Plate rejected")) %>% 
-  pivot_longer(cols = c("soundex", "osa", "perfect.match"), names_to = "algo") %>% 
-  group_by(plate, status, algo) %>% 
-  summarize(Maximum = max(value),
-            Nintieth.percentile = quantile(value, .90),
-            Fiftieth.percentile = quantile(value, .50),
-            Twentieth.percentile = quantile(value, .10)) %>%
-  ungroup()
+
 
