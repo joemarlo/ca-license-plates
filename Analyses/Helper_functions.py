@@ -41,7 +41,7 @@ def parse_plate(plate, ngram_nchar = 3):
     # e.g. plate "1234" would return "12, 123, 1234, 23, 234, 34"
     # ngram.nchar is the amount of characters the returned ngrams should be
     
-    # check if ngram_nchar is too long
+    # check if ngram_nchar is too long and is the right type
     if isinstance(ngram_nchar, int):
         if ngram_nchar > len(plate):
             raise ValueError('ngram_nchar should be less than or equal to length of plate')
@@ -56,12 +56,12 @@ def parse_plate(plate, ngram_nchar = 3):
     
     tokens = []
     
+    # loop through the plate and take every "forward"
+    #  combination of letters
     if len(plate) == 1:
         tokens = plate
     else:
         plate_len = len(plate)
-            
-        # index for storing results
         for bgn in range(0, plate_len):
             for end in range(bgn + 1, plate_len + 1):
                 tokens.append(plate[bgn:end])
