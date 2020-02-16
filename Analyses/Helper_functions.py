@@ -6,14 +6,8 @@ Created on Sat Feb 15 20:05:27 2020
 @author: joemarlo
 """
 
-import pandas as pd
 import numpy as np
 import string
-
-app_plates = pd.read_csv('Inputs/applications.csv')
-
-# filter to where status == Y and N
-app_plates = app_plates[[i in ['Y','N'] for i in app_plates.status]]
 
 
 def generate_plate(plate_nchar = 7):
@@ -35,7 +29,7 @@ def generate_plate(plate_nchar = 7):
     return "".join([str(char) for char in plate])
 
 
-def parse_plate(plate, ngram_nchar = 3):
+def parse_plate(plate, ngram_nchar = range(2,4)):
     # function takes a single plate and returns all 
     #  "forward" combinations of the letters
     # e.g. plate "1234" would return "12, 123, 1234, 23, 234, 34"
@@ -54,10 +48,9 @@ def parse_plate(plate, ngram_nchar = 3):
     # remove all spaces
     plate = plate.replace(" ", "")
     
-    tokens = []
-    
     # loop through the plate and take every "forward"
     #  combination of letters
+    tokens = []
     if len(plate) == 1:
         tokens = plate
     else:
@@ -79,3 +72,5 @@ def parse_plate(plate, ngram_nchar = 3):
     tokens = [i.lower() for i in tokens] 
     
     return tokens
+
+
