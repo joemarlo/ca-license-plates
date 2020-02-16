@@ -31,8 +31,10 @@ ca_plates = ca_plates[[i in ['Y','N'] for i in ca_plates.status]]
 # generate faux plates
 n_faux = sum(ca_plates.status == "N") - sum(ca_plates.status == 'Y')
 faux_plates = [generate_plate() for _ in range(n_faux)]
-faux_plates = pd.DataFrame(data = {'plate': faux_plates, 'source': ['faux'] * len(faux_plates)})
-faux_plates['status'] = ['Y'] * len(faux_plates)
+faux_plates = pd.DataFrame(data = {'plate': faux_plates,
+                                   'source': ['faux'] * len(faux_plates),
+                                   'status': ['Y'] * len(faux_plates)
+                                   })
 del n_faux
 
 # combine with CA and drop duplicates
@@ -50,7 +52,7 @@ print(pd.Series([len(i) for i in app_plates.plate]).value_counts())
 
 # rename the columns
 col_names = ["ngram_" + str(i) for i in range(1, len(plate_ngrams.columns)+1)]
-plate_ngrams.rename(columns=dict(zip(plate_ngrams.columns[0:], col_names)),
+plate_ngrams.rename(columns = dict(zip(plate_ngrams.columns[0:], col_names)),
                     inplace = True)
 del col_names
 
@@ -99,8 +101,6 @@ del lengths, word_nchars
 #         scores[i] = textd.levenshtein.normalized_similarity(ng, bw)
 #         i += 1
 
-
-    
 
 # from fuzzywuzzy import process, fuzz
 
