@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from plotnine import *
 import textdistance as textd
+from fuzzywuzzy import process, fuzz
 exec(open("Analyses/Helper_functions.py").read())
 
 
@@ -76,7 +77,7 @@ print(plate_ngrams.status.value_counts())
 # bad word matching
 # =============================================================================
 
-# read in the list of bad words
+# read in the list of bad words and remove duplicates
 bad_words = pd.read_table("Data/bad_words.txt", header = None).rename(columns={0: 'Word'}).Word.unique()
 
 # density plot of the bad word lengths
@@ -102,23 +103,27 @@ del lengths, word_nchars
 #         i += 1
 
 
-# from fuzzywuzzy import process, fuzz
+# takes 20+ min of 4ghz i5
+scores = []
+for x in plate_ngrams.ngram.unique():
+    scores.append(
+        process.extractOne(
+            x,
+            bad_words,
+            scorer = fuzz.token_sort_ratio)[1])
 
-# df = pd.DataFrame([['cliftonlarsonallen llp minneapolis MN'],
-#         ['loeb and troper llp newyork NY'],
-#         ["dauby o'connor and zaleski llc carmel IN"],
-#         ['wegner cpas llp madison WI']],
-#         columns=['org_name'])
+# turn into dataframe with original ngram
+top_matches = pd.DataFrame(data = {'match_score': scores,
+                                   'ngram': plate_ngrams.ngram.unique()
+                                   })
+# merge back with plate_ngrams
+plate_ngrams = plate_ngrams.merge(top_matches, on = 'ngram', how = 'left')
 
-# org_list = df['org_name']
+del top_matches
 
-# threshold = 40
-
-# def find_match(x):
-
-#   match = process.extract(x, org_list, limit=2, scorer=fuzz.partial_token_sort_ratio)[1]
-#   match = match if match[1]>threshold else np.nan
-#   return match
-
-# df['match found'] = df['org_name'].apply(find_match)
-
+# densities of scores
+ggplot(plate_ngrams) +\
+ aes(x = 'match_score', group = 'status', color = 'status') +\
+ geom_density() +\
+ geom_rug(alpha = 0.3)
+ 
