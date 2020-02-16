@@ -40,8 +40,8 @@ def parse_plate(plate, ngram_nchar = range(2,4)):
         if ngram_nchar > len(plate):
             raise ValueError('ngram_nchar should be less than or equal to length of plate')
     elif isinstance(ngram_nchar, range):
-        if max(ngram_nchar) > len(plate):
-            raise ValueError('ngram_nchar should be less than or equal to length of plate')
+        if min(ngram_nchar) > len(plate):
+            raise ValueError('minimum ngram_nchar should be less than or equal to length of plate')
     else:
         raise TypeError('ngram_nchar should be type integer or range')
     
