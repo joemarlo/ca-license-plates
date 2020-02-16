@@ -63,7 +63,7 @@ plate_ngrams = pd.concat([all_plates.reset_index(drop = True),
                          axis = 1)
 
 # pivot the table to a longer format
-plate_ngrams = pd.melt(plate_ngrams,id_vars = ['plate', 'source', 'status'])
+plate_ngrams = pd.melt(plate_ngrams, id_vars = ['plate', 'source', 'status'])
 
 # drop NAs, sort, and rename
 plate_ngrams = plate_ngrams.dropna().sort_values(by = ['plate', 'source', 'status', 'variable'])
@@ -95,12 +95,35 @@ del lengths, word_nchars
 # for x, y in [(x,y) for x in plate_ngrams.ngram.unique() for y in bad_words]:
 #     scores.append(textd.levenshtein.normalized_similarity(x, y))
 
-# scores = [None] * len(plate_ngrams.ngram) * len(bad_words)
-# i = 0
-# for ng in iter(plate_ngrams.ngram):
-#     for bw in iter(bad_words):
-#         scores[i] = textd.levenshtein.normalized_similarity(ng, bw)
-#         i += 1
+# takes about 10min
+scores_td = [None] * len(plate_ngrams.ngram.unique())
+i = 0
+for ng in plate_ngrams.ngram.unique():
+    scores_for_this_word = []
+    for bw in bad_words:
+        scores_for_this_word.append(textd.levenshtein.normalized_similarity(ng, bw))
+    scores_td[i] = max(scores_for_this_word)
+    i += 1
+
+# turn into dataframe with original ngram
+top_matches_td = pd.DataFrame(
+    data = {'match_score_td': scores_td,
+            'ngram': plate_ngrams.ngram.unique()
+            })
+
+# merge back with plate_ngrams
+plate_ngrams = plate_ngrams.merge(top_matches_td, on = 'ngram', how = 'left')
+
+del top_matches_td
+
+# densities of scores
+ggplot(plate_ngrams) +\
+ aes(x = 'match_score_td', group = 'status', color = 'status') +\
+ geom_density() +\
+ geom_rug(alpha = 0.3)
+
+
+
 
 
 # takes 20+ min of 4ghz i5
@@ -121,9 +144,13 @@ plate_ngrams = plate_ngrams.merge(top_matches, on = 'ngram', how = 'left')
 
 del top_matches
 
+ngrams_long = pd.melt(plate_ngrams, id_vars = ['plate', 'source', 'status', 'ngram'])
+
 # densities of scores
-ggplot(plate_ngrams) +\
- aes(x = 'match_score', group = 'status', color = 'status') +\
+ggplot(ngrams_long) +\
+ aes(x = 'value', group = 'status', color = 'status') +\
  geom_density() +\
- geom_rug(alpha = 0.3)
+ geom_rug(alpha = 0.3) +\
+ facet_wrap('variable', nrow = 2, scales = 'free')
  
+ del ngrams_long
