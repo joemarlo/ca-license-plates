@@ -75,6 +75,46 @@ print(plate_ngrams.source.value_counts())
 print(plate_ngrams.status.value_counts())
 
 # =============================================================================
+# create short list of ngrams that are freqently rejected
+# =============================================================================
+
+# calculate the frequency of the status per ngram
+ngram_counts = plate_ngrams.groupby('ngram').status.apply(lambda x: x.value_counts() / x.count())
+indices = ngram_counts.index.to_frame()
+ngram_freq_counts = plate_ngrams.groupby('ngram').status.value_counts()
+ngram_counts = pd.concat([indices.reset_index(drop = True), 
+                          pd.DataFrame(ngram_counts.values).reset_index(drop = True),
+                          pd.DataFrame(ngram_freq_counts).reset_index(drop = True)], 
+                         axis=1)
+del indices, ngram_freq_counts
+
+# rename the columns
+ngram_counts.columns = ['ngram', 'status', 'frequency', 'total_count']
+
+# filter to only include approvals, 10 or more occurances, 
+#  and rejection over 95%
+top_reject_ngrams = ngram_counts[(ngram_counts['status'] == 'N') & 
+                                 (ngram_counts['total_count'] > 9) &
+                                 (ngram_counts['frequency'] > .95)]
+
+# view the top 
+top_reject_ngrams.sort_values(by = ['total_count', 'frequency'],
+                              ascending = False)
+
+# densities of rejection count
+(ggplot(top_reject_ngrams) +
+ aes(x = 'total_count') +
+ geom_density())
+ 
+# densities of rejection frequency
+(ggplot(top_reject_ngrams) +
+ aes(x = 'frequency') +
+ geom_histogram())
+ 
+ # write to txt
+np.savetxt('Data/rejected_ngrams_py.txt', top_reject_ngrams.ngram, fmt='%s')
+
+# =============================================================================
 # bad word matching
 # =============================================================================
 
