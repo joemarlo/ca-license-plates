@@ -91,25 +91,33 @@ del lengths, word_nchars
 
 
 # calcualate text edit distance (fuzzy matching)
-# beware memory hog
-# for x, y in [(x,y) for x in plate_ngrams.ngram.unique() for y in bad_words]:
-#     scores.append(textd.levenshtein.normalized_similarity(x, y))
-
-# takes about 10min
-scores_td = [None] * len(plate_ngrams.ngram.unique())
+# takes about 10min for levenshtein distance
+# takes ~2hrs for all three
+scores_l = [None] * len(plate_ngrams.ngram.unique())
+scores_mra = [None] * len(plate_ngrams.ngram.unique())
+scores_ed = [None] * len(plate_ngrams.ngram.unique())
 i = 0
 for ng in plate_ngrams.ngram.unique():
-    scores_for_this_word = []
+    word_scores_l = []
+    word_scores_mra = []
+    word_scores_ed = []
     for bw in bad_words:
-        scores_for_this_word.append(textd.levenshtein.normalized_similarity(ng, bw))
-    scores_td[i] = max(scores_for_this_word)
+        word_scores_l.append(textd.levenshtein.normalized_similarity(ng, bw))
+        # word_scores_mra.append(textd.mra.normalized_similarity(ng, bw))
+        # word_scores_ed.append(textd.editex.normalized_similarity(ng, bw))
+    scores_l[i] = max(scores_for_this_word)
+    # scores_mra[i] = max(scores_for_this_word)
+    # scores_ed[i] = max(scores_for_this_word)
     i += 1
+
 
 # turn into dataframe with original ngram
 top_matches_td = pd.DataFrame(
-    data = {'match_score_td': scores_td,
-            'ngram': plate_ngrams.ngram.unique()
-            })
+    data = {
+        'match_score_l': scores_td,
+        'match_score_mra': scores_td,
+        'ngram': plate_ngrams.ngram.unique()
+        })
 
 # merge back with plate_ngrams
 plate_ngrams = plate_ngrams.merge(top_matches_td, on = 'ngram', how = 'left')
@@ -121,9 +129,6 @@ ggplot(plate_ngrams) +\
  aes(x = 'match_score_td', group = 'status', color = 'status') +\
  geom_density() +\
  geom_rug(alpha = 0.3)
-
-
-
 
 
 # takes 20+ min of 4ghz i5
