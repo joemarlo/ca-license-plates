@@ -103,47 +103,66 @@ pd.crosstab(plate_ngrams.status, plate_ngrams.direct_match)
 
 
 # calcualate text edit distance (fuzzy matching)
-# takes about 10min for levenshtein distance
+# takes about 15min on 4ghz i5 for levenshtein distance
 # takes ~2hrs for all three
+# need to find a C implementation of this
 scores_l = [None] * len(plate_ngrams.ngram.unique())
-scores_mra = [None] * len(plate_ngrams.ngram.unique())
-scores_ed = [None] * len(plate_ngrams.ngram.unique())
+# scores_mra = [None] * len(plate_ngrams.ngram.unique())
+# scores_ed = [None] * len(plate_ngrams.ngram.unique())
 i = 0
 for ng in plate_ngrams.ngram.unique():
     word_scores_l = []
-    word_scores_mra = []
-    word_scores_ed = []
+    # word_scores_mra = []
+    # word_scores_ed = []
     for bw in bad_words:
         word_scores_l.append(textd.levenshtein.normalized_similarity(ng, bw))
         # word_scores_mra.append(textd.mra.normalized_similarity(ng, bw))
         # word_scores_ed.append(textd.editex.normalized_similarity(ng, bw))
-    scores_l[i] = max(scores_for_this_word)
-    # scores_mra[i] = max(scores_for_this_word)
-    # scores_ed[i] = max(scores_for_this_word)
+    scores_l[i] = max(word_scores_l)
+    # scores_mra[i] = max(word_scores_mra)
+    # scores_ed[i] = max(word_scores_ed)
     i += 1
-
 
 # turn into dataframe with original ngram
 top_matches_td = pd.DataFrame(
     data = {
-        'match_score_l': scores_td,
-        'match_score_mra': scores_td,
+        'match_score_l': scores_l,
+        # 'match_score_mra': scores_mra,
+        # 'match_score_ed': scores_ed,
         'ngram': plate_ngrams.ngram.unique()
         })
 
 # merge back with plate_ngrams
 plate_ngrams = plate_ngrams.merge(top_matches_td, on = 'ngram', how = 'left')
-
 del top_matches_td
+
+# cross tab of status with the results from string matching
+pd.crosstab(plate_ngrams.status, plate_ngrams.match_score_l > 0.5)
+pd.crosstab(plate_ngrams.status, plate_ngrams.match_score_l > 0.9)
 
 # densities of scores
 ggplot(plate_ngrams) +\
- aes(x = 'match_score_td', group = 'status', color = 'status') +\
+ aes(x = 'match_score_l', group = 'status', color = 'status') +\
+ geom_density() +\
+ geom_rug(alpha = 0.3)
+
+# find the maximum score per plate
+max_scores = plate_ngrams.groupby('plate').max()
+
+ggplot(max_scores) +\
+ aes(x = 'match_score_l', group = 'status', color = 'status') +\
  geom_density() +\
  geom_rug(alpha = 0.3)
 
 
-# takes 20+ min of 4ghz i5
+# densities of scores
+ggplot(plate_ngrams) +\
+ aes(x = 'match_score_l', group = 'status', color = 'status') +\
+ geom_density() +\
+ geom_rug(alpha = 0.3)
+
+
+# takes 20+ min on 4ghz i5
 scores = []
 for x in plate_ngrams.ngram.unique():
     scores.append(
