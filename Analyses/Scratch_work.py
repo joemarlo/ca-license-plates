@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from plotnine import *
 import textdistance as textd
 from fuzzywuzzy import process, fuzz
+from sklearn import linear_model
 exec(open("Analyses/Helper_functions.py").read())
 
 
@@ -57,7 +58,7 @@ plate_ngrams.rename(columns = dict(zip(plate_ngrams.columns[0:], col_names)),
                     inplace = True)
 del col_names
 
-# add original plate and source identiers
+# add original plate and source identifier
 plate_ngrams = pd.concat([all_plates.reset_index(drop = True),
                           plate_ngrams.reset_index(drop = True)], 
                          axis = 1)
@@ -88,6 +89,17 @@ ggplot(lengths) +\
  geom_density()
  
 del lengths, word_nchars
+
+# how many ngrams are direct matches
+direct_matches = [i in bad_words for i in plate_ngrams.ngram]
+pd.Series(direct_matches).value_counts()
+plate_ngrams.ngram[direct_matches]
+
+# add the identifier to the main dataframe
+plate_ngrams['direct_match'] = direct_matches
+
+# cross tab of matches and status
+pd.crosstab(plate_ngrams.status, plate_ngrams.direct_match)
 
 
 # calcualate text edit distance (fuzzy matching)
@@ -158,4 +170,17 @@ ggplot(ngrams_long) +\
  geom_rug(alpha = 0.3) +\
  facet_wrap('variable', nrow = 2, scales = 'free')
  
- del ngrams_long
+del ngrams_long
+ 
+# =============================================================================
+# plots 
+# =============================================================================
+
+ggplot(ngrams_long) +\
+ aes(x = 'value', group = 'status', color = 'status') +\
+ geom_density() +\
+ geom_rug(alpha = 0.3) +\
+ facet_wrap('variable', nrow = 2, scales = 'free')
+
+
+
