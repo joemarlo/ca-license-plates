@@ -79,29 +79,6 @@ ngram.graph %>%
 
 There doesn't appear to be any clear groupings It's important to view this graph a few different times with various random seeds. There's many correct ways to visualize the same graph and sometimes you can draw the wrong conclusions from a single visualization.
 
-<!-- # # frequency of denials vs. approved for top covariate ngrams -->
-<!-- # plate.ngrams %>%  -->
-<!-- #   filter(word %in% colnames(cos.mat)) %>%  -->
-<!-- #   inner_join(app.plates, by = "id") %>%  -->
-<!-- #   select(id, word, status) %>%  -->
-<!-- #   group_by(word, status) %>%  -->
-<!-- #   count() %>%  -->
-<!-- #   group_by(word) %>%  -->
-<!-- #   mutate(score = n / sum(n)) %>%  -->
-<!-- #   ggplot(aes(x = status, y = score)) + -->
-<!-- #   geom_col() + -->
-<!-- #   facet_wrap(~word) -->
-
-<!-- # # plot for rejected plates -->
-<!-- # plate.ngrams %>%  -->
-<!-- #   left_join(app.plates[, c("id", "status")]) %>%  -->
-<!-- #   filter(status == "N") %>%  -->
-<!-- #   cosine_matrix(lower = .0045, upper = .80, filt = .80) %>%  -->
-<!-- #   graph_from_adjacency_matrix(mode = "undirected", weighted = TRUE) %>% -->
-<!-- #   ggraph(layout = "nicely") + -->
-<!-- #   geom_edge_link(aes(alpha = weight), show.legend = FALSE) + -->
-<!-- #   geom_node_label(aes(label = name)) -->
-
 # Clustering
 Since we already built a 'network' using the cosine similarity we can cluster this network using the walktrap algorithm and see if there are any large groupings or communities. Hopefully, there will be materially differences in the communities and some will have materially higher license plate rejection rates.
 

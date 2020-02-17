@@ -64,17 +64,6 @@ plate.ngrams <- plate.ngrams %>%
   select(source, plate, word, perfect.match, soundex, osa) %>% 
   left_join(all.plates[, c("plate", "status")], by = 'plate')
 
-
-plate.ngrams %>% 
-  group_by(plate, status) %>% 
-  # mutate(score = if_else(max(perfect.match) == 1, "N", "Y")) %>% 
-  mutate(score = if_else(max(perfect.match) == 1, "N",
-                         if_else(max(soundex * .3 + osa * .7) > 0.8, "N", "Y"))) %>%
-  summarize(score = max(score)) %>% 
-  xtabs(~status + score, data = .) %>% 
-  prop.table() %>% 
-  round(., 2)
-
 # create grid of various weightings of the soundex and OSA algos
 #  along with a threshold to build a aggregate score based on 
 #  this formula (soundex score * weight + osa score  * (1 - weight)) > threshold
